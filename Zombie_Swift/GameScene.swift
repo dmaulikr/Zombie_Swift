@@ -10,8 +10,10 @@ import SpriteKit
 
 class GameScene: SKScene {
     
-    let ZOMBIE_MOVE_POINTS_PER_SEC = 120.0
+    let ZOMBIE_MOVE_POINTS_PER_SEC = 150.0
     let ARC4RANDOM_MAX = 0x100000000
+    let CAT_MOVE_POINTS_PER_SEC = 120.0
+    
     var _zombie = SKSpriteNode()
     var _lastUpdatetime = NSTimeInterval()
     var _dt = NSTimeInterval()
@@ -36,6 +38,7 @@ class GameScene: SKScene {
         _zombie = SKSpriteNode(imageNamed:"zombie1.png")
         _zombie.position = CGPointMake(300.0, 300.0)
         _zombie.setScale(2.0)
+        _zombie.zPosition = 100
         self.addChild(_zombie)
         initZombieAnimation()
         self.runAction(SKAction.repeatActionForever(SKAction.sequence([SKAction.runBlock(spawnEnemy), SKAction.waitForDuration(2.0)])))
@@ -89,6 +92,7 @@ class GameScene: SKScene {
             self.boundsCheckPlayer()
             self.rotateZombie(_zombie, direction: _velocity)
         }
+        moveTrain()
     }
     override func didEvaluateActions()
     {
@@ -234,22 +238,31 @@ class GameScene: SKScene {
                 var cat: SKSpriteNode = node as SKSpriteNode
                 if CGRectIntersectsRect(cat.frame, self._zombie.frame)
                 {
-                    cat.removeFromParent()
+                    //cat.removeFromParent()
+                    cat.name = "train"
                     self.runAction(SKAction.playSoundFileNamed("hitCat.wav", waitForCompletion: false));
+                    cat.removeAllActions()
+                    cat.zRotation = 0
+                    var actionTurnGreen = SKAction.colorizeWithColor(UIColor.greenColor(), colorBlendFactor:1.0, duration:0.2)
+                    cat.runAction(actionTurnGreen)
                 }
             })
         }
     
         self.enumerateChildNodesWithName("enemy", usingBlock:{ node, stop in
-            var enemy = node as SKSpriteNode;
+            var enemy = node as SKSpriteNode
             var smallerFrame = CGRectInset(enemy.frame, 20, 20);
             if(CGRectIntersectsRect(smallerFrame, self._zombie.frame)){
-                self._ifZombieInvincible = true
                 self.runAction(SKAction.playSoundFileNamed("hitCatLady.wav", waitForCompletion: false));
-                self._zombie.runAction(self.blinkZombie())
-                self._zombie.hidden = false
-                self._ifZombieInvincible = false
-                }
+                self._ifZombieInvincible = true
+                var sequence = SKAction.sequence([self.blinkZombie(),SKAction.runBlock(
+                    {
+                        () in
+                        self._zombie.hidden = false
+                        self._ifZombieInvincible = false
+                    })])
+             self._zombie.runAction(sequence)
+            }
             })
     }
     func blinkZombie() -> SKAction
@@ -264,6 +277,26 @@ class GameScene: SKScene {
             }
         )
         return blinkAction
+    }
+    
+    func moveTrain()
+    {
+        var targetPosition = _zombie.position
+        self.enumerateChildNodesWithName("train", usingBlock: {
+            (node, stop) in
+            if !node.hasActions()
+            {
+                let actionDuration = 0.3
+                var offset:CGPoint = self.CGPointSubstract(targetPosition, b: node.position)
+                var direction:CGPoint = self.CGPointNormalize(offset)
+                var amountToMovePerSec:CGPoint = self.CGPointMultiplyScalar(direction, b:self.CAT_MOVE_POINTS_PER_SEC)
+                var amountToMove:CGPoint = self.CGPointMultiplyScalar(amountToMovePerSec, b: actionDuration)
+                var moveAction:SKAction = SKAction.moveByX(amountToMove.x, y: amountToMove.y, duration: actionDuration)
+                node.runAction(moveAction)
+                targetPosition = node.position
+            }
+        })
+        
     }
     
     
