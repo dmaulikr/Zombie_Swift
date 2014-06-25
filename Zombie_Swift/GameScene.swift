@@ -11,11 +11,14 @@ import SpriteKit
 class GameScene: SKScene {
     
     let ZOMBIE_MOVE_POINTS_PER_SEC = 120.0
+    let ARC4RANDOM_MAX = 0x100000000
     var _zombie = SKSpriteNode()
     var _lastUpdatetime = NSTimeInterval()
     var _dt = NSTimeInterval()
     var _velocity = CGPoint()
     var _lastTouchLocation = CGPoint()
+    var _zombieAnimation = SKAction()
+    var _ifZombieInvincible = Bool()
     
 
     override func didMoveToView(view: SKView) {
@@ -28,10 +31,15 @@ class GameScene: SKScene {
         bg.position = CGPointMake(self.size.width/2, self.size.height/2)
         bg.setScale(2.0)
         self.addChild(bg)
+        
+        // Setup zombie sprite
         _zombie = SKSpriteNode(imageNamed:"zombie1.png")
         _zombie.position = CGPointMake(300.0, 300.0)
         _zombie.setScale(2.0)
         self.addChild(_zombie)
+        initZombieAnimation()
+        self.runAction(SKAction.repeatActionForever(SKAction.sequence([SKAction.runBlock(spawnEnemy), SKAction.waitForDuration(2.0)])))
+        self.runAction(SKAction.repeatActionForever(SKAction.sequence([SKAction.runBlock(spawnCat), SKAction.waitForDuration(1.0)])))
     }
     
     override func touchesBegan(touches: NSSet, withEvent event: UIEvent) {
@@ -41,6 +49,20 @@ class GameScene: SKScene {
             let location = touch.locationInNode(self)
             self.moveZombieToward(location)
         }
+    }
+    
+    override func touchesEnded(touches: NSSet!, withEvent event: UIEvent!) {
+        let touch = touches.anyObject() as UITouch;
+        var touchLocation = touch.locationInNode(self);
+        self.moveZombieToward(touchLocation);
+        
+    }
+    
+    override func touchesMoved(touches: NSSet!, withEvent event: UIEvent!) {
+        let touch = touches.anyObject() as UITouch;
+        var touchLocation = touch.locationInNode(self);
+        self.moveZombieToward(touchLocation);
+        
     }
     override func update(currentTime: CFTimeInterval) {
         /* Called before each frame is rendered */
@@ -54,10 +76,11 @@ class GameScene: SKScene {
         }
         _lastUpdatetime = currentTime
         var distance = CGPointSubstract(_lastTouchLocation, b: _zombie.position)
-        if CGPointLength(distance) <= ZOMBIE_MOVE_POINTS_PER_SEC * _dt
+        if CGPointLength(distance) < ZOMBIE_MOVE_POINTS_PER_SEC * _dt
         {
             _zombie.position = _lastTouchLocation
             _velocity = CGPointZero
+            stopZombieAnimation()
         
         }
         else
@@ -67,6 +90,12 @@ class GameScene: SKScene {
             self.rotateZombie(_zombie, direction: _velocity)
         }
     }
+    override func didEvaluateActions()
+    {
+        checkCollisions()
+    }
+    
+    //Zombie Actions
     func moveSprite (sprite : SKSpriteNode, velocity :CGPoint)
     {
         var amountToMove = CGPointMultiplyScalar(velocity, b: _dt)
@@ -74,6 +103,7 @@ class GameScene: SKScene {
     }
     func moveZombieToward (location : CGPoint)
     {
+        startZombieAnimation()
         _lastTouchLocation = location
         var offset = CGPointSubstract(location, b: _zombie.position)
         var direction = CGPointNormalize(offset)
@@ -84,8 +114,82 @@ class GameScene: SKScene {
         sprite.zRotation = atan2(direction.y, direction.x)
     
     }
+    // MARK: - Zombie Animations
+    func initZombieAnimation()
+    {
+        var textures: AnyObject[] = []
+        for i in 1..4
+        {
+            var textureName = String(format:"zombie%d", i)
+            var texture = SKTexture(imageNamed: textureName)
+            textures.append(texture)
+        }
+        for var i = 4; i > 1; i--
+        {
+            var textureName = String(format:"zombie%d", i)
+            var texture = SKTexture(imageNamed: textureName)
+            textures.append(texture)
+        }
+        _zombieAnimation = SKAction.animateWithTextures(textures, timePerFrame: 0.1)
+        _zombie.runAction(SKAction.repeatActionForever(_zombieAnimation))
+    }
     
+    func startZombieAnimation()
+    {
+        if !_zombie.actionForKey("animation")
+        {
+            _zombie.runAction(SKAction.repeatActionForever(_zombieAnimation), withKey:"animation")
+        }
+        
+    }
+    func stopZombieAnimation()
+    {
+        _zombie.removeActionForKey("animation")
+    }
     
+    //Enemy
+    func spawnEnemy()
+    {
+        var enemy = SKSpriteNode(imageNamed:"enemy")
+        enemy.name = "enemy"
+        enemy.position = CGPointMake(self.size.width + enemy.size.width/2, ScalarRandomRange(enemy.size.height/2, max: self.size.height - enemy.size.height/2))
+        enemy.setScale(1.5)
+        self.addChild(enemy)
+        var actionMove: SKAction = SKAction.moveToX(-enemy.size.width/2, duration: 2.0)
+        var actionRemove : SKAction = SKAction.removeFromParent()
+        enemy.runAction(SKAction.sequence([actionMove, actionRemove]))
+        
+    }
+    
+    func spawnCat()
+    {
+        let cat = SKSpriteNode(imageNamed:"cat")
+        cat.name = "cat"
+        cat.position = CGPointMake(ScalarRandomRange(0, max: self.size.width), ScalarRandomRange(0, max: self.size.height))
+        cat.xScale = 0
+        cat.yScale = 0
+        self.addChild(cat)
+        
+        cat.zRotation = -M_PI / 16
+        let appear = SKAction.scaleTo(1.5, duration: 0.5)
+        var leftWiggle = SKAction.rotateByAngle(M_PI/8, duration: 0.5)
+        var rightWiggle = leftWiggle.reversedAction()
+        var fullWiggle:SKAction = SKAction.sequence([leftWiggle, rightWiggle])
+        //let wiggleWait = SKAction.repeatAction(fullWiggle, count: 10)
+        
+        var scaleUp = SKAction.scaleBy(1.8, duration: 0.25)
+        var scaleDown = scaleUp.reversedAction()
+        var fullScale = SKAction.sequence([scaleUp, scaleDown, scaleUp, scaleDown])
+        
+        var group = SKAction.group([fullScale, fullWiggle])
+        var groupWait = SKAction .repeatAction(group, count: 10)
+        
+        
+        let disappear = SKAction.scaleTo(0.0, duration: 0.5)
+        let removeFromParent = SKAction.removeFromParent()
+        cat.runAction(SKAction.sequence([appear, groupWait, disappear, removeFromParent]))
+    
+    }
     
     func boundsCheckPlayer()
     {
@@ -120,9 +224,50 @@ class GameScene: SKScene {
         _velocity = newVelocity
     
     }
+    func checkCollisions()
+    {
+        if !_ifZombieInvincible
+        {
+        self.enumerateChildNodesWithName("cat", usingBlock:
+            {
+                node, stop in
+                var cat: SKSpriteNode = node as SKSpriteNode
+                if CGRectIntersectsRect(cat.frame, self._zombie.frame)
+                {
+                    cat.removeFromParent()
+                    self.runAction(SKAction.playSoundFileNamed("hitCat.wav", waitForCompletion: false));
+                }
+            })
+        }
+    
+        self.enumerateChildNodesWithName("enemy", usingBlock:{ node, stop in
+            var enemy = node as SKSpriteNode;
+            var smallerFrame = CGRectInset(enemy.frame, 20, 20);
+            if(CGRectIntersectsRect(smallerFrame, self._zombie.frame)){
+                self._ifZombieInvincible = true
+                self.runAction(SKAction.playSoundFileNamed("hitCatLady.wav", waitForCompletion: false));
+                self._zombie.runAction(self.blinkZombie())
+                self._zombie.hidden = false
+                self._ifZombieInvincible = false
+                }
+            })
+    }
+    func blinkZombie() -> SKAction
+    {
+        let blinkTimes = 10
+        let blinkDuration = 3.0
+        var blinkAction = SKAction.customActionWithDuration(blinkDuration, actionBlock:
+            {  node, elapsedTime in
+                var slice = CFloat(blinkDuration) / CFloat(blinkTimes)
+                var remainder = fmodf(CFloat(elapsedTime), CFloat(slice))
+                node.hidden = remainder > slice / 2
+            }
+        )
+        return blinkAction
+    }
     
     
-    //math box - helper methods
+    // MARK:  - helper methods
     func CGPointAdd (a:CGPoint, b:CGPoint) ->CGPoint
     {
         return CGPointMake(a.x + b.x, a.y + b.y)
@@ -163,5 +308,9 @@ class GameScene: SKScene {
             angle += M_PI * 2
         }
         return angle
+    }
+    func ScalarRandomRange (min:CGFloat, max:CGFloat) ->CGFloat{
+        
+     return (CGFloat)(floorf((CFloat(arc4random()) / CFloat(ARC4RANDOM_MAX)) * CFloat(max - min) + CFloat(min)))
     }
 }
