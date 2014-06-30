@@ -13,6 +13,7 @@ class GameScene: SKScene {
     let ZOMBIE_MOVE_POINTS_PER_SEC = 150.0
     let ARC4RANDOM_MAX = 0x100000000
     let CAT_MOVE_POINTS_PER_SEC = 120.0
+
     
     var _zombie = SKSpriteNode()
     var _lastUpdatetime = NSTimeInterval()
@@ -21,7 +22,9 @@ class GameScene: SKScene {
     var _lastTouchLocation = CGPoint()
     var _zombieAnimation = SKAction()
     var _ifZombieInvincible = Bool()
-    
+    var _lives = Int()
+    var _gameOver = Bool()
+
 
     override func didMoveToView(view: SKView) {
         /* Setup your scene here */
@@ -33,6 +36,9 @@ class GameScene: SKScene {
         bg.position = CGPointMake(self.size.width/2, self.size.height/2)
         bg.setScale(2.0)
         self.addChild(bg)
+        
+        _lives = 5
+        _gameOver = false
         
         // Setup zombie sprite
         _zombie = SKSpriteNode(imageNamed:"zombie1.png")
@@ -93,6 +99,12 @@ class GameScene: SKScene {
             self.rotateZombie(_zombie, direction: _velocity)
         }
         moveTrain()
+        if _lives <= 0 && !_gameOver
+        {
+            _gameOver = true
+            println("You Lose!")
+        
+        }
     }
     override func didEvaluateActions()
     {
@@ -254,6 +266,9 @@ class GameScene: SKScene {
             var smallerFrame = CGRectInset(enemy.frame, 20, 20);
             if(CGRectIntersectsRect(smallerFrame, self._zombie.frame)){
                 self.runAction(SKAction.playSoundFileNamed("hitCatLady.wav", waitForCompletion: false));
+                self.loseCats()
+                self._lives--
+                println("Lives left: \(self._lives)")
                 self._ifZombieInvincible = true
                 var sequence = SKAction.sequence([self.blinkZombie(),SKAction.runBlock(
                     {
@@ -261,7 +276,8 @@ class GameScene: SKScene {
                         self._zombie.hidden = false
                         self._ifZombieInvincible = false
                     })])
-             self._zombie.runAction(sequence)
+                self._zombie.runAction(sequence)
+                
             }
             })
     }
@@ -282,8 +298,10 @@ class GameScene: SKScene {
     func moveTrain()
     {
         var targetPosition = _zombie.position
+        var trainCount = 0
         self.enumerateChildNodesWithName("train", usingBlock: {
             (node, stop) in
+            trainCount += 1
             if !node.hasActions()
             {
                 let actionDuration = 0.3
@@ -296,9 +314,36 @@ class GameScene: SKScene {
                 targetPosition = node.position
             }
         })
+        if trainCount >= 30 && !_gameOver
+        {
+            _gameOver = true
+            println("You Win!")
+        }
         
     }
+    func loseCats()
+    {
+        var loseCount = 0
+        self.enumerateChildNodesWithName("train", usingBlock:
+            {
+                (node: SKNode!, stop: CMutablePointer<ObjCBool>) in
+                var randomSpot = node.position
+                randomSpot.x += self.ScalarRandomRange(-100, max: 100)
+                randomSpot.y += self.ScalarRandomRange(-100, max: 100)
+                
+                node.name = ""
+                var group = SKAction.group([SKAction.rotateByAngle(M_PI * 4, duration: 1.0), SKAction.moveTo(randomSpot, duration: 1.0), SKAction.scaleTo(0, duration: 1.0)])
+                node.runAction(SKAction.sequence([group, SKAction.removeFromParent()]))
+            
+                loseCount++
+                if loseCount >= 2
+                {
+                    stop.withUnsafePointer { $0.memory = true }
+                }
+            })
+       
     
+    }
     
     // MARK:  - helper methods
     func CGPointAdd (a:CGPoint, b:CGPoint) ->CGPoint
