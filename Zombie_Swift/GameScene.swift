@@ -105,7 +105,7 @@ class GameScene: SKScene {
         if _lives <= 0 && !_gameOver
         {
             _gameOver = true
-            println("You Lose!")
+            //println("You Lose!")
             let gameOverScene: SKScene = GameOverScene(size: self.size, won: false)
             let reveal = SKTransition.flipHorizontalWithDuration(0.5)
             self.view.presentScene(gameOverScene, transition: reveal)
@@ -276,7 +276,7 @@ class GameScene: SKScene {
                 enemy.name = ""
                 self.loseCats()
                 self._lives--
-                println("Lives left: \(self._lives)")
+                //println("Lives left: \(self._lives)")
 
                 self._ifZombieInvincible = true
                 let blinkTimes = 10
@@ -322,7 +322,7 @@ class GameScene: SKScene {
         if trainCount >= 5 && !_gameOver
         {
             _gameOver = true
-            println("You Win!")
+            //println("You Win!")
             _backgroundMusicPlayer.stop()
             let gameOverScene: SKScene = GameOverScene(size: self.size, won: true)
             let reveal = SKTransition.flipHorizontalWithDuration(0.5)
