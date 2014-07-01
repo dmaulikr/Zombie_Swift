@@ -7,6 +7,8 @@
 //
 
 import SpriteKit
+import AVFoundation
+
 
 class GameScene: SKScene {
     
@@ -24,7 +26,7 @@ class GameScene: SKScene {
     var _ifZombieInvincible = Bool()
     var _lives = Int()
     var _gameOver = Bool()
-
+    var _backgroundMusicPlayer = AVAudioPlayer()
 
     override func didMoveToView(view: SKView) {
         /* Setup your scene here */
@@ -32,6 +34,7 @@ class GameScene: SKScene {
         
         // Set background
         self.backgroundColor = SKColor.whiteColor()
+        self.playBackgroundMusic("bgMusic.mp3")
         var bg: SKSpriteNode = SKSpriteNode(imageNamed:"background")
         bg.position = CGPointMake(self.size.width/2, self.size.height/2)
         bg.setScale(2.0)
@@ -103,6 +106,9 @@ class GameScene: SKScene {
         {
             _gameOver = true
             println("You Lose!")
+            let gameOverScene: SKScene = GameOverScene(size: self.size, won: false)
+            let reveal = SKTransition.flipHorizontalWithDuration(0.5)
+            self.view.presentScene(gameOverScene, transition: reveal)
         
         }
     }
@@ -313,10 +319,14 @@ class GameScene: SKScene {
                 targetPosition = node.position
             }
         })
-        if trainCount >= 30 && !_gameOver
+        if trainCount >= 5 && !_gameOver
         {
             _gameOver = true
             println("You Win!")
+            _backgroundMusicPlayer.stop()
+            let gameOverScene: SKScene = GameOverScene(size: self.size, won: true)
+            let reveal = SKTransition.flipHorizontalWithDuration(0.5)
+            self.view.presentScene(gameOverScene, transition: reveal)
         }
         
     }
@@ -343,7 +353,15 @@ class GameScene: SKScene {
        
     
     }
-    
+    func playBackgroundMusic(filename: NSString)
+    {
+        var error:NSErrorPointer?
+        var backgroundMusicURL:NSURL = NSBundle.mainBundle().URLForResource(filename, withExtension: nil)
+        _backgroundMusicPlayer = AVAudioPlayer(contentsOfURL: backgroundMusicURL, error:error!)
+        _backgroundMusicPlayer.numberOfLoops = -1
+        _backgroundMusicPlayer.prepareToPlay()
+        _backgroundMusicPlayer.play()
+    }
     // MARK:  - helper methods
     func CGPointAdd (a:CGPoint, b:CGPoint) ->CGPoint
     {
@@ -390,4 +408,5 @@ class GameScene: SKScene {
         
      return (CGFloat)(floorf((CFloat(arc4random()) / CFloat(ARC4RANDOM_MAX)) * CFloat(max - min) + CFloat(min)))
     }
+    
 }
