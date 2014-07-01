@@ -266,11 +266,22 @@ class GameScene: SKScene {
             var smallerFrame = CGRectInset(enemy.frame, 20, 20);
             if(CGRectIntersectsRect(smallerFrame, self._zombie.frame)){
                 self.runAction(SKAction.playSoundFileNamed("hitCatLady.wav", waitForCompletion: false));
+                enemy.hidden = true
+                enemy.name = ""
                 self.loseCats()
                 self._lives--
                 println("Lives left: \(self._lives)")
+
                 self._ifZombieInvincible = true
-                var sequence = SKAction.sequence([self.blinkZombie(),SKAction.runBlock(
+                let blinkTimes = 10
+                let blinkDuration = 3.0
+                var blinkAction = SKAction.customActionWithDuration(blinkDuration, actionBlock:
+                {  node, elapsedTime in
+                    var slice = CFloat(blinkDuration) / CFloat(blinkTimes)
+                    var remainder = fmodf(CFloat(elapsedTime), CFloat(slice))
+                    node.hidden = remainder > slice / 2
+                })
+                var sequence = SKAction.sequence([blinkAction,SKAction.runBlock(
                     {
                         () in
                         self._zombie.hidden = false
@@ -281,19 +292,7 @@ class GameScene: SKScene {
             }
             })
     }
-    func blinkZombie() -> SKAction
-    {
-        let blinkTimes = 10
-        let blinkDuration = 3.0
-        var blinkAction = SKAction.customActionWithDuration(blinkDuration, actionBlock:
-            {  node, elapsedTime in
-                var slice = CFloat(blinkDuration) / CFloat(blinkTimes)
-                var remainder = fmodf(CFloat(elapsedTime), CFloat(slice))
-                node.hidden = remainder > slice / 2
-            }
-        )
-        return blinkAction
-    }
+    
     
     func moveTrain()
     {

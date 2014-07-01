@@ -545,6 +545,7 @@
 				39A2E40D1951B79800AE0323 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		39A2E40E1951B79800AE0323 /* Build configuration list for PBXNativeTarget "Zombie_SwiftTests" */ = {
 			isa = XCConfigurationList;
@@ -553,6 +554,7 @@
 				39A2E4101951B79800AE0323 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
