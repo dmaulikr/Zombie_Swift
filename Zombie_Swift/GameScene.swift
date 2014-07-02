@@ -15,8 +15,9 @@ class GameScene: SKScene {
     let ZOMBIE_MOVE_POINTS_PER_SEC = 150.0
     let ARC4RANDOM_MAX = 0x100000000
     let CAT_MOVE_POINTS_PER_SEC = 120.0
+    let BG_POINTS_PER_SEC = 50.0
 
-    
+
     var _zombie = SKSpriteNode()
     var _lastUpdatetime = NSTimeInterval()
     var _dt = NSTimeInterval()
@@ -35,11 +36,15 @@ class GameScene: SKScene {
         // Set background
         self.backgroundColor = SKColor.whiteColor()
         self.playBackgroundMusic("bgMusic.mp3")
-        var bg: SKSpriteNode = SKSpriteNode(imageNamed:"background")
-        bg.position = CGPointMake(self.size.width/2, self.size.height/2)
-        bg.setScale(2.0)
-        self.addChild(bg)
-        
+        for var i = 0; i<2; i++
+        {
+            var bg: SKSpriteNode = SKSpriteNode(imageNamed:"background")
+            bg.anchorPoint = CGPointZero
+            bg.position = CGPointMake(CGFloat(i) * bg.size.width, 0)
+            bg.name = "bg"
+            bg.setScale(2.0)
+            self.addChild(bg)
+        }
         _lives = 5
         _gameOver = false
         
@@ -102,6 +107,7 @@ class GameScene: SKScene {
             self.rotateZombie(_zombie, direction: _velocity)
         }
         moveTrain()
+        self.moveBg()
         if _lives <= 0 && !_gameOver
         {
             _gameOver = true
@@ -361,6 +367,26 @@ class GameScene: SKScene {
         _backgroundMusicPlayer.numberOfLoops = -1
         _backgroundMusicPlayer.prepareToPlay()
         _backgroundMusicPlayer.play()
+    }
+    
+    func moveBg()
+    {
+        self.enumerateChildNodesWithName("bg", usingBlock:
+            {
+                (node: SKNode!, stop: CMutablePointer<ObjCBool>) in
+                var bg = node as SKSpriteNode
+                var bgVelocity:CGPoint = CGPointMake(-self.BG_POINTS_PER_SEC, 0)
+                var amtToMove = self.CGPointMultiplyScalar(bgVelocity, b: self._dt)
+                bg.position = self.CGPointAdd(bg.position, b: amtToMove)
+                if bg.position.x <= -bg.size.width
+                {
+                    bg.position = CGPointMake(bg.position.x + bg.size.width * 2 , bg.position.y)
+                }
+            })
+        
+        
+    
+    
     }
     // MARK:  - helper methods
     func CGPointAdd (a:CGPoint, b:CGPoint) ->CGPoint
